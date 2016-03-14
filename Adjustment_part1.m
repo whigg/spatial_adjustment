@@ -17,13 +17,50 @@ DG =load('Directions_Grads.csv');  %Directions Grad
 
 DD = DG *(360/400);                %Directions Degrees DD:
 
-DR = degtorad(DD);                 %Directions Radians DR:
+dr = degtorad(DD);                 %Directions Radians DR:
 
 sTP = load('Stand_Point.csv');     %Stand Point
 
 TP = load('Target_Point.csv');     %Target Point
 
 dxTest = load('dxTest.csv');        %LoopFunction :: parameter matrix
+
+
+  %create and apply a swing to the directions observations
+       for m=1:11;j=1;
+        swing(m,j) = atan((Y(2,1)-Y(1,1))/(X(2,1)-X(1,1)));
+        m=12:22;j=1;
+        swing(m,j) = atan((Y(1,1)-Y(2,1))/(X(1,1)-X(2,1))) + pi;
+        m = 23:33;j=1;
+        swing(m,j) = atan((Y(3,1)-Y(1,1))/(X(3,1)-X(1,1))) + pi;
+        m= 34:44;
+        swing(m,j) = atan((Y(4,1)-Y(1,1))/(X(4,1)-X(1,1))) + pi;
+        m = 45:49 ;
+        swing(m,j) = atan((Y(5,1)-Y(1,1))/(X(5,1)-X(1,1))) ; 
+        Dr= dr+swing; 
+       end 
+       
+
+       for m=1:length(Dr) 
+       if (Dr(m)>0 & Dr(m)<=pi)
+          DR(m) = Dr(m);
+
+        elseif (Dr(m)<=1.5*pi & Dr(m)>pi )
+         DR(m) =  Dr(m);
+     
+        elseif (Dr(m)<=2*pi  & Dr(m)>1.5*pi)
+           DR(m) = Dr(m);
+    
+        elseif (Dr(m)>2*pi)
+          DR(m) = Dr(m)-2*pi;
+    
+        else (Dr(m)<=0)
+         DR(m) = Dr(m) + 2*pi;
+     
+        end
+       end
+
+
 
 %COMPUTATIONS:  PART II
 
@@ -44,7 +81,7 @@ ry=[];                                   % Y params
 
 %%
 %while dxTest ~= zeros(24,1);
-for m=1:1
+for m=1:50
     
     % DISTANCE COMPUTATIONS
 
@@ -117,9 +154,19 @@ for m=1:1
     
         ADs2(m,1) = sqrt(dX^2 + dY^2);
 
-        ADr(m,1) = atan(dY/dX);
+        if ((dX>0) &&(dY>0));
+        ADr(m,1) = atan (abs(dY/dX));
+        elseif ((dX<0) && (dY>0));
+        ADr(m,1) = pi -(atan (abs(dY/dX)));
+        elseif ((dX<0) && (dY<0));
+        ADr(m,1) = atan (abs(dY/dX)) + pi;
+        else ((dX>0) && (dY<0));
+        ADr(m,1) = (2*pi)-atan (abs(dY/dX));    
+        end
+        
+        % ADr(m,1) = atan(dY/dX);
      end
-    
+  
 
      %Direction L Matrix DrLM:
      DrLM = []; 
@@ -148,11 +195,11 @@ for m=1:1
     
         a=i*2;
         b=j*2;
-        dA(m,a-1)   = (dY/s);                 %start point coefficients
-        dA(m,a)     = -(dX/s);
+        dA(m,a-1)   = (dY/s^2);                 %start point coefficients
+        dA(m,a)     = -(dX/s^2);
     
-        dA(m,b-1)   = -(dY/s);                %end point coefficients
-        dA(m,b)     = (dX/s);
+        dA(m,b-1)   = -(dY/s^2);                %end point coefficients
+        dA(m,b)     = (dX/s^2);
 
         dN(m,i)=1;                            %direction nuisance params dN:
     
@@ -175,7 +222,7 @@ for m=1:1
      %%
 
      N = A'*W*A;                              %normal equation matrix of the form [Nxx, Nxt; Ntx, Ntx]
-
+     
      Nxx = N(1:24,1:24);
 
      Nxt = N(1:24,25:end);
@@ -183,7 +230,7 @@ for m=1:1
 
      Ntt = N(25:end,25:end);     
 
-     nxx = Nxx-Nxt*inv(Ntt)*Ntx ;
+     nxx = Nxx-Nxt*inv(Ntt)*Ntx;
 
      %G matrix
 
@@ -211,39 +258,45 @@ for m=1:1
 
      NXX = [nxx,G;G',zeros(3,3)];             %Reduced Normal Equation Matrix NXX: (27*27) 
 
-     QXX = inv(NXX);                          %Cofactor matrix of parameters Qxx: (24*24)
-     Qxx = QXX(1:24,1:24);
+    % QXX = inv(NXX);                          %Cofactor matrix of parameters Qxx: (24*24)
+     Qxx = inv(NXX);
+     %Qxx = QXX(1:24,1:24);
 
      %absolute vectors
      nx=Ax'*W*L;
      nt=At'*W*L;
 
      %reduced absolute vectors
-     n_x = nx-Nxt*inv(Ntt)*nt;
+    %n_x = nx-Nxt*inv(Ntt)*nt;
+     
+     n_xx=[n_x ;zeros(3,1)];
 
      %PARAMETER MATRIX
 
-     dx = Qxx*nx                               %params dx
-     
+     %dx = Qxx*n_x  ;                             %params dx
+     dxx = Qxx*n_xx  ;  
+     %dx = dxx(1:24);
      for m=1:12    
         i=m*2-1;
         j=m*2;  
     
-        rx(m,1)=dx(i); 
-        ry(m,1)=dx(j);
+        rx(m,1)=dxx(i); %dx(i);
+        ry(m,1)=dxx(j); %dx(j);
     end  
      
 
     X=X+rx;
     Y=Y+ry;                                  %change coordinates.
-    dxTest=dx;   
+    %dxTest=dx;   
  
 end
 
 %%
 
 %RESIDUAL MATRIX 
-v = L - Ax*dx; 
+dx1=[dxx;zeros(2,1)];
+v = L - A*dx1; 
+%v = L - Ax*dx; 
 
 apos = (v'*W*v)/(55-24);                      %Aposteriori Variance
 
@@ -356,8 +409,8 @@ chi = 46.979;
 
 if chi <= T
     display('Accept the null hypothesis')
-    else
-        display('Reject the null hypothesis')
+else
+    display('Reject the null hypothesis')
 end
 
 toc
