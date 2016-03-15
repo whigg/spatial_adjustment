@@ -43,19 +43,19 @@ dxTest = load('dxTest.csv');        %LoopFunction :: parameter matrix
 
        for m=1:length(Dr) 
        if (Dr(m)>0 & Dr(m)<=pi)
-          DR(m) = Dr(m);
+          Obs_DR(m) = Dr(m);
 
         elseif (Dr(m)<=1.5*pi & Dr(m)>pi )
-         DR(m) =  Dr(m);
+         Obs_DR(m) =  Dr(m);
      
         elseif (Dr(m)<=2*pi  & Dr(m)>1.5*pi)
-           DR(m) = Dr(m);
+           Obs_DR(m) = Dr(m);
     
         elseif (Dr(m)>2*pi)
-          DR(m) = Dr(m)-2*pi;
+          Obs_DR(m) = Dr(m)-2*pi;
     
         else (Dr(m)<=0)
-         DR(m) = Dr(m) + 2*pi;
+         Obs_DR(m) = Dr(m) + 2*pi;
      
         end
        end
@@ -99,15 +99,7 @@ for m=1:50
     end
 
     %Distance L Matrix DsLM:
-    DsLM = []; 
-
-     for m=1:length(ADs1)
-        i =D(m);
-        j =ADs1(m);
-    
-        DsLM(m,1) = i-j;
-    
-     end
+    DsLM = D - ADs1;    
 
      %Distance A Matrix sA:
      sA = zeros(6,24);           
@@ -169,16 +161,11 @@ for m=1:50
   
 
      %Direction L Matrix DrLM:
-     DrLM = []; 
-
-     for m=1:length(ADr)
-        i = DR(m);
-        j = ADr(m);
-    
-        DrLM(m,1) = i-j;
-    
-     end
-
+        
+     DR = Obs_DR';
+     
+     DrLM = DR-ADr;
+     
      %Directions A Matrix dA:
      dA = zeros(49,24);
 
@@ -214,8 +201,8 @@ for m=1:50
      %combined A matrix:     
      Ax = [sA;dA];                            %observations A
 
-     At = [sN;dN];                            %nuisances A
-
+     %At = [sN;dN];                            %nuisances A
+      At = [zeros(6,5);dN];
      
      A = [Ax At];
     
@@ -228,9 +215,17 @@ for m=1:50
      Nxt = N(1:24,25:end);
      Ntx = N(25:end,1:24);                    %extracted components
 
-     Ntt = N(25:end,25:end);     
+     Ntt = N(25:end,25:end);
+     
+     
+     %absolute vectors
+     nx=Ax'*W*L;
+     nt=At'*W*L;
 
-     nxx = Nxx-Nxt*inv(Ntt)*Ntx;
+     %reduced absolute vectors
+     n_x = nx-(Nxt*(inv(Ntt))*nt);
+     
+     nxx = Nxx-(Nxt*(inv(Ntt))*Ntx);
 
      %G matrix
 
@@ -258,65 +253,59 @@ for m=1:50
 
      NXX = [nxx,G;G',zeros(3,3)];             %Reduced Normal Equation Matrix NXX: (27*27) 
 
-    % QXX = inv(NXX);                          %Cofactor matrix of parameters Qxx: (24*24)
-     Qxx = inv(NXX);
-     %Qxx = QXX(1:24,1:24);
-
-     %absolute vectors
-     nx=Ax'*W*L;
-     nt=At'*W*L;
-
-     %reduced absolute vectors
-    %n_x = nx-Nxt*inv(Ntt)*nt;
-     
+     QXX = inv(NXX);                       %Cofactor matrix of parameters Qxx: (24*24)
+         
      n_xx=[n_x ;zeros(3,1)];
 
      %PARAMETER MATRIX
-
-     %dx = Qxx*n_x  ;                             %params dx
-     dxx = Qxx*n_xx  ;  
-     %dx = dxx(1:24);
+     
+     DX = QXX*n_xx ;                   %params dx
+         
+     dx = DX(1:24);
      for m=1:12    
         i=m*2-1;
         j=m*2;  
     
-        rx(m,1)=dxx(i); %dx(i);
-        ry(m,1)=dxx(j); %dx(j);
+        rx(m,1)= dx(i); %DX(i);
+        ry(m,1)= dx(j); %DX(j);
     end  
      
 
     X=X+rx;
     Y=Y+ry;                                  %change coordinates.
-    %dxTest=dx;   
+    %dxTest=DX;   
  
 end
 
 %%
 
 %RESIDUAL MATRIX 
-dx1=[dxx;zeros(2,1)];
-v = L - A*dx1; 
+dx1=[DX;zeros(2,1)];
+
+v = L - (A*dx1); 
 %v = L - Ax*dx; 
 
+%GMM=(v'*W*v)
 apos = (v'*W*v)/(55-24);                      %Aposteriori Variance
 
+Qxx = QXX(1:24,1:24);
 Exx = apos*Qxx;                               %Covariance Matrix EXX
 
 %RESULTS
 
 %%
-coords =zeros(12,3);                          %1.coordinates
+coords =zeros(12,2);                          %1.coordinates
 
 for m=1:12
-    coords(m,1)=m;
-    coords(m,2)=X(m);
-    coords(m,3)=Y(m);   
+    %coords(m,1)=m;
+    coords(m,1)=X(m);
+    coords(m,2)=Y(m);   
 end
 
 %%
 sig = diag(Exx);                              %2. standard deviations
 sigXY = diag(Exx,1);
-sigmas =zeros(12,3);
+sigmas =zeros(12,2);
 
 for m=1:12    
     i=m*2-1;
@@ -325,9 +314,9 @@ for m=1:12
     sigY(m,1)=sig(j);    
     
     %display results
-    sigmas(m,1)=m;            
-    sigmas(m,2)=sigX(m);
-    sigmas(m,3)=sigY(m);  
+    %sigmas(m,1)=m;            
+    sigmas(m,1)=sigX(m);
+    sigmas(m,2)=sigY(m);  
    
 end 
 
@@ -337,7 +326,7 @@ end
 a=[];
 b=[];
 orient=[];
-elements =zeros(12,4);                        %3. standard error ellipses
+elements =zeros(12,3);                        %3. standard error ellipses
 
 
 for m=1:12
@@ -347,10 +336,10 @@ for m=1:12
     orient(m)= radtodeg( 0.5*atan((2*sigXY(m))/(sigX(m)-sigY(m))));
 
     %display results
-    elements(m,1)=m;
-    elements(m,2)=abs(a(m));
-    elements(m,3)=abs(b(m));
-    elements(m,4)=orient(m);   
+    %elements(m,1)=m;
+    elements(m,1)=abs(a(m));
+    elements(m,2)=abs(b(m));
+    elements(m,3)=orient(m);   
 end 
 
  x= [];
@@ -378,8 +367,8 @@ for m=1:length(elements)
  
     t=-2*pi:0.01:2*pi;
 
-    p=X(m)+(elements(m,2)*sin(t)); 
-    q=Y(m)+(elements(m,3)*cos(t));  
+    p=X(m)+(elements(m,2)*sin(t)*2); 
+    q=Y(m)+(elements(m,3)*cos(t)*2);  
 
     ellipse = plot(q,p,'-g'); 
 

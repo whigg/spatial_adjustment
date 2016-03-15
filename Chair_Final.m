@@ -176,7 +176,7 @@ for i=1;j=1:2:24;
 end
 
 R=[N_x G';G zeros(3,3)];
- n_xx=[n_x ;zeros(3,1)];
+n_xx=[n_x ;zeros(3,1)];  
  Qxxx=inv(R);
  dxf=inv(R)*n_xx;
  
@@ -185,7 +185,7 @@ R=[N_x G';G zeros(3,3)];
       i=1:2:24;
       dx1=dxf(i);
       i=2:2:24;
-     dy1=dxf(i);
+      dy1=dxf(i);
   end
 X=X+dx1;
 Y=Y+dy1;
