@@ -26,41 +26,7 @@ TP = load('Target_Point.csv');     %Target Point
 dxTest = load('dxTest.csv');        %LoopFunction :: parameter matrix
 
 
-  %create and apply a swing to the directions observations
-       for m=1:11;j=1;
-        swing(m,j) = atan((Y(2,1)-Y(1,1))/(X(2,1)-X(1,1)));
-        m=12:22;j=1;
-        swing(m,j) = atan((Y(1,1)-Y(2,1))/(X(1,1)-X(2,1))) + pi;
-        m = 23:33;j=1;
-        swing(m,j) = atan((Y(3,1)-Y(1,1))/(X(3,1)-X(1,1))) + pi;
-        m= 34:44;
-        swing(m,j) = atan((Y(4,1)-Y(1,1))/(X(4,1)-X(1,1))) + pi;
-        m = 45:49 ;
-        swing(m,j) = atan((Y(5,1)-Y(1,1))/(X(5,1)-X(1,1))) ; 
-        Dr= dr+swing; 
-       end 
-       
-
-       for m=1:length(Dr) 
-       if (Dr(m)>0 & Dr(m)<=pi)
-          Obs_DR(m) = Dr(m);
-
-        elseif (Dr(m)<=1.5*pi & Dr(m)>pi )
-         Obs_DR(m) =  Dr(m);
-     
-        elseif (Dr(m)<=2*pi  & Dr(m)>1.5*pi)
-           Obs_DR(m) = Dr(m);
-    
-        elseif (Dr(m)>2*pi)
-          Obs_DR(m) = Dr(m)-2*pi;
-    
-        else (Dr(m)<=0)
-         Obs_DR(m) = Dr(m) + 2*pi;
-     
-        end
-       end
-
-
+  
 
 %COMPUTATIONS:  PART II
 
@@ -76,8 +42,6 @@ for m=7:55
     W(m,m)=w2;
 end
 
-rx=[];                                   % X params
-ry=[];                                   % Y params
 
 %%
 %while dxTest ~= zeros(24,1);
@@ -132,10 +96,10 @@ for m=1:50
      %DIRECTIONS COMPUTATIONS
 
      %Approx Distances ADs2:
-     ADs2 = [];   
+     ADs2 = zeros(49,1);   
 
      %Approx Directions ADr
-     ADr = [];   
+     ADr = zeros(49,1);   
 
      for m=1:length(sTP)
         i =sTP(m);
@@ -147,17 +111,50 @@ for m=1:50
         ADs2(m,1) = sqrt(dX^2 + dY^2);
 
         if ((dX>0) &&(dY>0));
-        ADr(m,1) = atan (abs(dY/dX));
-        elseif ((dX<0) && (dY>0));
-        ADr(m,1) = pi -(atan (abs(dY/dX)));
-        elseif ((dX<0) && (dY<0));
-        ADr(m,1) = atan (abs(dY/dX)) + pi;
-        else ((dX>0) && (dY<0));
-        ADr(m,1) = (2*pi)-atan (abs(dY/dX));    
+          ADr(m,1) = atan (abs(dY/dX));
+         elseif ((dX<0) && (dY>0));
+          ADr(m,1) = pi -(atan (abs(dY/dX)));
+         elseif ((dX<0) && (dY<0));
+          ADr(m,1) = atan (abs(dY/dX)) + pi;
+         else
+          ADr(m,1) = (2*pi)-atan (abs(dY/dX));    
         end
         
-        % ADr(m,1) = atan(dY/dX);
+         %ADr(m,1) = atan(dY/dX);
      end
+     
+     %create and apply a swing to the directions observations
+       for m=1:11;j=1;
+        swing(m,j) = atan((Y(2,1)-Y(1,1))/(X(2,1)-X(1,1)));
+        m=12:22;j=1;
+        swing(m,j) = atan((Y(1,1)-Y(2,1))/(X(1,1)-X(2,1))) + pi;
+        m = 23:33;j=1;
+        swing(m,j) = atan((Y(3,1)-Y(1,1))/(X(3,1)-X(1,1))) + pi;
+        m= 34:44;
+        swing(m,j) = atan((Y(4,1)-Y(1,1))/(X(4,1)-X(1,1))) + pi;
+        m = 45:49 ;
+        swing(m,j) = atan((Y(5,1)-Y(1,1))/(X(5,1)-X(1,1))) ; 
+        Dr= dr+swing; 
+       end 
+       
+      for m=1:length(Dr) 
+        if (Dr(m)>0 & Dr(m)<=pi);
+          Obs_DR(m) = Dr(m);
+
+        elseif (Dr(m)<=1.5*pi & Dr(m)>pi );
+         Obs_DR(m) =  Dr(m);
+     
+        elseif (Dr(m)<=2*pi  & Dr(m)>1.5*pi);
+           Obs_DR(m) = Dr(m);
+    
+        elseif (Dr(m)>2*pi);
+          Obs_DR(m) = Dr(m)-2*pi;
+    
+        else (Dr(m)<=0);
+         Obs_DR(m) = Dr(m) + 2*pi;
+     
+        end
+       end
   
 
      %Direction L Matrix DrLM:
@@ -260,7 +257,10 @@ for m=1:50
      %PARAMETER MATRIX
      
      DX = QXX*n_xx ;                   %params dx
-         
+      
+     rx=[];                                   % X params
+     ry=[];                                   % Y params
+
      dx = DX(1:24);
      for m=1:12    
         i=m*2-1;
@@ -273,7 +273,7 @@ for m=1:50
 
     X=X+rx;
     Y=Y+ry;                                  %change coordinates.
-    %dxTest=DX;   
+    %dxTest=dx;   
  
 end
 
@@ -303,37 +303,37 @@ for m=1:12
 end
 
 %%
-sig = diag(Exx);                              %2. standard deviations
-sigXY = diag(Exx,1);
+var = diag(Exx);                              %2. standard deviations
+covXY = diag(Exx,1);
 sigmas =zeros(12,2);
 
 for m=1:12    
     i=m*2-1;
     j=m*2;
-    sigX(m,1)=sig(i); 
-    sigY(m,1)=sig(j);    
+    sigX(m,1)=sqrt(var(i)); 
+    sigY(m,1)=sqrt(var(j));    
     
     %display results
     %sigmas(m,1)=m;            
     sigmas(m,1)=sigX(m);
     sigmas(m,2)=sigY(m);  
+    sigmas(m,3)=covXY(m*2-1);
    
 end 
 
 %%
 
-
 a=[];
 b=[];
-orient=[];
+orient= zeros(12,1);
 elements =zeros(12,3);                        %3. standard error ellipses
 
 
 for m=1:12
-    a(m)= (0.5*(sigX(m)+sigY(m))+sqrt(0.4*(sigX(m)-sigY(m))^2+sigXY(m)))/1000;
-    b(m)= (0.5*(sigX(m)+sigY(m))-sqrt(0.4*(sigX(m)-sigY(m))^2+sigXY(m)))/1000;
+    a(m)= (0.5*(sigX(m)^2+sigY(m)^2)+sqrt(0.4*(sigX(m)^2-sigY(m)^2)^2+covXY(m)));
+    b(m)= (0.5*(sigX(m)^2+sigY(m)^2)-sqrt(0.4*(sigX(m)^2-sigY(m)^2)^2+covXY(m)));
 
-    orient(m)= radtodeg( 0.5*atan((2*sigXY(m))/(sigX(m)-sigY(m))));
+    orient(m)= radtodeg( 0.5*atan((2*covXY(m))/(sigX(m)^2-sigY(m)^2)));
 
     %display results
     %elements(m,1)=m;
@@ -345,21 +345,36 @@ end
  x= [];
  y= [];
 
-%plot network
-for m=1:length(sTP)    
-    a=sTP(m);
-    b=TP(m);
-
-    x(m,1) = X(a);
-    x(m,2) = X(b);
-    y(m,1) = Y(a);
-    y(m,2) = Y(b);
-    
-    plot(y,x,'-r');
-
-    hold on    
-
+%plot grid
+for i = 1:12;
+    x=X(i);
+    y=Y(i);
+    grid on;
+    hold on;
+    plot(x,y);
 end
+xlabel('X Coordinates');
+ylabel('Y Coordinates');
+title('Adjusted Network');
+
+%plot network
+
+ for m=1:length(sTP)    
+     a=sTP(m);
+     b=TP(m);
+
+      p = X(a);
+      g = X(b);
+      q = Y(a);
+      r = Y(b);
+
+      x = [p g];
+      y = [q r];
+      
+     plot(y,x,'-r');
+     hold on   
+
+ end
 
  p= [];
  q= [];
@@ -367,23 +382,21 @@ for m=1:length(elements)
  
     t=-2*pi:0.01:2*pi;
 
-    p=X(m)+(elements(m,2)*sin(t)*2); 
-    q=Y(m)+(elements(m,3)*cos(t)*2);  
+    p=X(m)+(elements(m,1)*sin(t)*20000); 
+    q=Y(m)+(elements(m,2)*cos(t)*20000);  
 
     ellipse = plot(q,p,'-g'); 
 
-    % dr=[0 0 1];
-    % origin=[p q];
-    % rotate(plot(q,p,'-g'),dr,elements(m,4),origin);   
+%     % dr=[0 0 1];
+%     % origin=[p q];
+%     % rotate(plot(q,p,'-g'),dr,elements(m,4),origin);   
 
     text(Y(m),X(m),num2str(m));
 
     hold on  
             
 end
-xlabel('Y Coordinates');
-ylabel('X Coordinates');
-title('Adjusted Network');
+
 
 
 
@@ -394,13 +407,15 @@ title('Adjusted Network');
 T = (v'*W*v)/1;    %test hypothesis
 
 %Chi-Square comparison at 95% C.I :
-chi = 46.979;
+chiU = 47.6;                   %set a check against lower and upper chi limits
+chiL = 16.168;
 
-if chi <= T
+if (T>chiL && T < chiU)
     display('Accept the null hypothesis')
 else
     display('Reject the null hypothesis')
 end
+
 
 toc
 
